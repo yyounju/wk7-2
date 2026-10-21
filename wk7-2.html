@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>영어 단어 20 - Massed vs Spaced Practice</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .card-perspective {
+      perspective: 1000px;
+    }
+    .card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-style: preserve-3d;
+    }
+    .card-inner.is-flipped {
+      transform: rotateY(180deg);
+    }
+    .card-front, .card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 1rem;
+    }
+    .card-back {
+      transform: rotateY(180deg);
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col items-center p-3 sm:p-6 font-sans">
+
+  <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl p-4 sm:p-6 flex flex-col gap-5 my-auto">
+    <!-- Header -->
+    <header class="text-center border-b border-slate-200 pb-3">
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-800">영어 단어 20 암기장</h1>
+      <p class="text-xs sm:text-sm text-slate-500 mt-1">집중 vs 분산 학습 모드 & 퀴즈</p>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="grid grid-cols-5 gap-1 bg-slate-100 p-1.5 rounded-xl text-xs sm:text-sm font-semibold text-slate-600">
+      <button id="nav-massed" class="nav-tab active py-2 rounded-lg text-center transition bg-white text-blue-600 shadow-sm">집중</button>
+      <button id="nav-spaced" class="nav-tab py-2 rounded-lg text-center transition hover:text-blue-600">분산</button>
+      <button id="nav-card" class="nav-tab py-2 rounded-lg text-center transition hover:text-blue-600">카드</button>
+      <button id="nav-quiz" class="nav-tab py-2 rounded-lg text-center transition hover:text-blue-600">퀴즈</button>
+      <button id="nav-list" class="nav-tab py-2 rounded-lg text-center transition hover:text-blue-600">목록</button>
+    </nav>
+
+    <!-- 1. Massed Practice Tab -->
+    <section id="tab-massed" class="tab-content flex flex-col gap-4">
+      <div class="bg-blue-50 border-l-4 border-blue-600 p-3 rounded-r-lg text-xs sm:text-sm text-blue-800 leading-relaxed">
+        <strong>집중 학습 (Massed Practice):</strong> 한 단어를 연속으로 3회 반복하여 빠르게 각인시킵니다.
+      </div>
+      <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+        <div id="massed-progress" class="bg-blue-600 h-full w-0 transition-all duration-300"></div>
+      </div>
+      <div class="flex justify-between text-xs font-semibold text-slate-500">
+        <span id="massed-repeat-txt">반복: 1 / 3 회</span>
+        <span id="massed-index-txt">단어: 1 / 20</span>
+      </div>
+
+      <!-- Card -->
+      <div id="massed-card-trigger" class="card-perspective h-56 w-full cursor-pointer select-none">
+        <div id="massed-card-inner" class="card-inner">
+          <div class="card-front bg-slate-800 text-white flex flex-col justify-center items-center p-6 border border-slate-700 shadow-md">
+            <div class="flex items-center gap-3">
+              <span id="massed-eng" class="text-2xl sm:text-3xl font-extrabold tracking-wide">Word</span>
+              <button type="button" id="massed-audio" class="p-2.5 bg-slate-700 hover:bg-slate-600 active:scale-95 rounded-full text-lg leading-none transition">🔊</button>
+            </div>
+            <span class="text-xs text-slate-400 mt-6">카드를 터치하여 뜻 확인</span>
+          </div>
+          <div class="card-back bg-blue-600 text-white flex flex-col justify-center items-center p-6 shadow-md text-center">
+            <div id="massed-kor" class="text-2xl font-bold mb-3">뜻</div>
+            <div id="massed-ex" class="text-xs sm:text-sm text-blue-100 italic">"Example sentence"</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-3 mt-1">
+        <button id="massed-prev" class="flex-1 py-3 px-4 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-700 font-bold rounded-xl transition">이전</button>
+        <button id="massed-next" class="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold rounded-xl shadow-md transition">다음 (반복)</button>
+      </div>
+    </section>
+
+    <!-- 2. Spaced Practice Tab -->
+    <section id="tab-spaced" class="tab-content hidden flex flex-col gap-4">
+      <div class="bg-indigo-50 border-l-4 border-indigo-600 p-3 rounded-r-lg text-xs sm:text-sm text-indigo-800 leading-relaxed">
+        <strong>분산 학습 (Spaced Practice):</strong> 전체 20개 단어를 순차적으로 3회차 순환 학습합니다.
+      </div>
+      <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+        <div id="spaced-progress" class="bg-indigo-600 h-full w-0 transition-all duration-300"></div>
+      </div>
+      <div class="flex justify-between text-xs font-semibold text-slate-500">
+        <span id="spaced-round-txt">회차: 1 / 3 라운드</span>
+        <span id="spaced-index-txt">단어: 1 / 20</span>
+      </div>
+
+      <!-- Card -->
+      <div id="spaced-card-trigger" class="card-perspective h-56 w-full cursor-pointer select-none">
+        <div id="spaced-card-inner" class="card-inner">
+          <div class="card-front bg-slate-800 text-white flex flex-col justify-center items-center p-6 border border-slate-700 shadow-md">
+            <div class="flex items-center gap-3">
+              <span id="spaced-eng" class="text-2xl sm:text-3xl font-extrabold tracking-wide">Word</span>
+              <button type="button" id="spaced-audio" class="p-2.5 bg-slate-700 hover:bg-slate-600 active:scale-95 rounded-full text-lg leading-none transition">🔊</button>
+            </div>
+            <span class="text-xs text-slate-400 mt-6">카드를 터치하여 뜻 확인</span>
+          </div>
+          <div class="card-back bg-indigo-600 text-white flex flex-col justify-center items-center p-6 shadow-md text-center">
+            <div id="spaced-kor" class="text-2xl font-bold mb-3">뜻</div>
+            <div id="spaced-ex" class="text-xs sm:text-sm text-indigo-100 italic">"Example sentence"</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-3 mt-1">
+        <button id="spaced-prev" class="flex-1 py-3 px-4 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-700 font-bold rounded-xl transition">이전</button>
+        <button id="spaced-next" class="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-bold rounded-xl shadow-md transition">다음 단어</button>
+      </div>
+    </section>
+
+    <!-- 3. Flashcard Tab -->
+    <section id="tab-card" class="tab-content hidden flex flex-col gap-4">
+      <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+        <div id="card-progress" class="bg-emerald-600 h-full w-0 transition-all duration-300"></div>
+      </div>
+      <div class="text-right text-xs font-semibold text-slate-500">
+        <span id="card-index-txt">1 / 20</span>
+      </div>
+
+      <!-- Card -->
+      <div id="card-trigger" class="card-perspective h-56 w-full cursor-pointer select-none">
+        <div id="card-inner" class="card-inner">
+          <div class="card-front bg-slate-800 text-white flex flex-col justify-center items-center p-6 border border-slate-700 shadow-md">
+            <div class="flex items-center gap-3">
+              <span id="card-eng" class="text-2xl sm:text-3xl font-extrabold tracking-wide">Word</span>
+              <button type="button" id="card-audio" class="p-2.5 bg-slate-700 hover:bg-slate-600 active:scale-95 rounded-full text-lg leading-none transition">🔊</button>
+            </div>
+            <span class="text-xs text-slate-400 mt-6">카드를 터치하여 뜻 확인</span>
+          </div>
+          <div class="card-back bg-emerald-600 text-white flex flex-col justify-center items-center p-6 shadow-md text-center">
+            <div id="card-kor" class="text-2xl font-bold mb-3">뜻</div>
+            <div id="card-ex" class="text-xs sm:text-sm text-emerald-100 italic">"Example sentence"</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-3 mt-1">
+        <button id="card-prev" class="flex-1 py-3 px-4 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-700 font-bold rounded-xl transition">이전</button>
+        <button id="card-next" class="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold rounded-xl shadow-md transition">다음</button>
+      </div>
+    </section>
+
+    <!-- 4. Quiz Tab -->
+    <section id="tab-quiz" class="tab-content hidden flex flex-col gap-4">
+      <div id="quiz-body" class="flex flex-col gap-4">
+        <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+          <div id="quiz-progress" class="bg-amber-500 h-full w-0 transition-all duration-300"></div>
+        </div>
+        <div class="text-right text-xs font-semibold text-slate-500">
+          <span id="quiz-index-txt">1 / 20</span>
+        </div>
+
+        <div class="text-center py-4 bg-slate-50 rounded-xl border border-slate-200">
+          <div id="quiz-word" class="text-2xl sm:text-3xl font-bold text-slate-800">Word</div>
+        </div>
+
+        <div id="quiz-options" class="flex flex-col gap-2.5">
+          <!-- Quiz options generated dynamically -->
+        </div>
+      </div>
+
+      <div id="quiz-result" class="hidden text-center py-8 flex flex-col items-center">
+        <h2 class="text-2xl font-bold text-slate-800">퀴즈 종료!</h2>
+        <div id="quiz-score" class="text-4xl font-extrabold text-amber-500 my-4">0 / 20</div>
+        <p id="quiz-feedback" class="text-sm text-slate-600 mb-6">수고하셨습니다!</p>
+        <button id="quiz-restart" class="w-full py-3.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-bold rounded-xl shadow-md transition">다시 도전하기</button>
+      </div>
+    </section>
+
+    <!-- 5. Word List Tab -->
+    <section id="tab-list" class="tab-content hidden">
+      <div id="word-list-container" class="max-h-[380px] overflow-y-auto pr-1 flex flex-col gap-2">
+        <!-- List items generated dynamically -->
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // Vocabulary dataset
+    const vocabulary = [
+      { eng: "achieve", kor: "달성하다, 성취하다", ex: "She worked hard to achieve her goals." },
+      { eng: "benefit", kor: "혜택, 이익", ex: "Fresh air is a great benefit to health." },
+      { eng: "challenge", kor: "도전, 과제", ex: "Learning a new language is a big challenge." },
+      { eng: "discover", kor: "발견하다", ex: "Scientists discovered a new species." },
+      { eng: "efficient", kor: "효율적인", ex: "We need a more efficient way of working." },
+      { eng: "flexible", kor: "유연한, 융통성 있는", ex: "My schedule is quite flexible today." },
+      { eng: "generate", kor: "창출하다, 발생시키다", ex: "The solar panels generate electricity." },
+      { eng: "hesitate", kor: "망설이다, 주저하다", ex: "Don't hesitate to ask for help." },
+      { eng: "improve", kor: "개선하다, 향상시키다", ex: "Practice every day to improve your skills." },
+      { eng: "journey", kor: "여정, 여행", ex: "Life is a long journey." },
+      { eng: "knowledge", kor: "지식", ex: "Reading books expands your knowledge." },
+      { eng: "maintain", kor: "유지하다, 관리하다", ex: "It is important to maintain a healthy diet." },
+      { eng: "negotiate", kor: "협상하다", ex: "They tried to negotiate a better price." },
+      { eng: "opportunity", kor: "기회", ex: "Don't miss this great opportunity." },
+      { eng: "persuade", kor: "설득하다", ex: "He managed to persuade her to join us." },
+      { eng: "require", kor: "요구하다, 필요로 하다", ex: "This task requires high concentration." },
+      { eng: "solution", kor: "해결책", ex: "We finally found a solution to the problem." },
+      { eng: "transform", kor: "변형시키다, 바꾸다", ex: "Technology can transform our lives." },
+      { eng: "ultimate", kor: "궁극적인, 최후의", ex: "Our ultimate objective is peace." },
+      { eng: "valuable", kor: "귀중한, 가치 있는", ex: "Time is one of our most valuable things." }
+    ];
+
+    // Global state
+    let activeTab = "massed";
+    let isUserInteracted = false;
+
+    // State for Massed Practice
+    let massedWordIdx = 0;
+    let massedRepeatCount = 1;
+    let isMassedFlipped = false;
+
+    // State for Spaced Practice
+    let spacedWordIdx = 0;
+    let spacedRoundCount = 1;
+    let isSpacedFlipped = false;
+
+    // State for Flashcards
+    let cardIdx = 0;
+    let isCardFlipped = false;
+
+    // State for Quiz
+    let quizIdx = 0;
+    let quizScore = 0;
+    let quizData = [];
+
+    // Text-to-Speech Engine
+    function speakWord(text) {
+      if (!('speechSynthesis' in window)) return;
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.error("Audio TTS Error:", err);
+      }
+    }
+
+    // Unlocks browser audio autoplay permissions on first click/touch
+    function enableAudioInteraction() {
+      if (!isUserInteracted) {
+        isUserInteracted = true;
+        if (activeTab === 'massed') speakWord(vocabulary[massedWordIdx].eng);
+        else if (activeTab === 'spaced') speakWord(vocabulary[spacedWordIdx].eng);
+      }
+    }
+
+    // Switch Tabs
+    function setTab(tabName) {
+      activeTab = tabName;
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-tab').forEach(el => {
+        el.classList.remove('bg-white', 'text-blue-600', 'shadow-sm');
+        el.classList.add('hover:text-blue-600');
+      });
+
+      const activeBtn = document.getElementById(`nav-${tabName}`);
+      const activeContent = document.getElementById(`tab-${tabName}`);
+
+      activeBtn.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+      activeBtn.classList.remove('hover:text-blue-600');
+      activeContent.classList.remove('hidden');
+
+      if (tabName === 'massed') {
+        renderMassedCard(true);
+      } else if (tabName === 'spaced') {
+        renderSpacedCard(true);
+      } else if (tabName === 'card') {
+        renderCard();
+      } else if (tabName === 'quiz') {
+        initQuiz();
+      } else if (tabName === 'list') {
+        renderWordList();
+      }
+    }
+
+    // --- 1. Massed Practice ---
+    function renderMassedCard(shouldSpeak = false) {
+      const item = vocabulary[massedWordIdx];
+      const cardInner = document.getElementById('massed-card-inner');
+
+      if (isMassedFlipped) {
+        cardInner.classList.remove('is-flipped');
+        isMassedFlipped = false;
+      }
+
+      document.getElementById('massed-eng').textContent = item.eng;
+      document.getElementById('massed-kor').textContent = item.kor;
+      document.getElementById('massed-ex').textContent = `"${item.ex}"`;
+
+      document.getElementById('massed-repeat-txt').textContent = `반복: ${massedRepeatCount} / 3 회`;
+      document.getElementById('massed-index-txt').textContent = `단어: ${massedWordIdx + 1} / ${vocabulary.length}`;
+
+      const totalSteps = vocabulary.length * 3;
+      const currentStep = (massedWordIdx * 3) + massedRepeatCount;
+      document.getElementById('massed-progress').style.width = `${(currentStep / totalSteps) * 100}%`;
+
+      if (shouldSpeak && isUserInteracted) {
+        speakWord(item.eng);
+      }
+    }
+
+    function handleMassedNext() {
+      if (massedRepeatCount < 3) {
+        massedRepeatCount++;
+      } else {
+        massedRepeatCount = 1;
+        if (massedWordIdx < vocabulary.length - 1) {
+          massedWordIdx++;
+        } else {
+          massedWordIdx = 0;
+        }
+      }
+      renderMassedCard(true);
+    }
+
+    function handleMassedPrev() {
+      if (massedRepeatCount > 1) {
+        massedRepeatCount--;
+      } else if (massedWordIdx > 0) {
+        massedWordIdx--;
+        massedRepeatCount = 3;
+      }
+      renderMassedCard(true);
+    }
+
+    // --- 2. Spaced Practice ---
+    function renderSpacedCard(shouldSpeak = false) {
+      const item = vocabulary[spacedWordIdx];
+      const cardInner = document.getElementById('spaced-card-inner');
+
+      if (isSpacedFlipped) {
+        cardInner.classList.remove('is-flipped');
+        isSpacedFlipped = false;
+      }
+
+      document.getElementById('spaced-eng').textContent = item.eng;
+      document.getElementById('spaced-kor').textContent = item.kor;
+      document.getElementById('spaced-ex').textContent = `"${item.ex}"`;
+
+      document.getElementById('spaced-round-txt').textContent = `회차: ${spacedRoundCount} / 3 라운드`;
+      document.getElementById('spaced-index-txt').textContent = `단어: ${spacedWordIdx + 1} / ${vocabulary.length}`;
+
+      const totalSteps = vocabulary.length * 3;
+      const currentStep = ((spacedRoundCount - 1) * vocabulary.length) + (spacedWordIdx + 1);
+      document.getElementById('spaced-progress').style.width = `${(currentStep / totalSteps) * 100}%`;
+
+      if (shouldSpeak && isUserInteracted) {
+        speakWord(item.eng);
+      }
+    }
+
+    function handleSpacedNext() {
+      if (spacedWordIdx < vocabulary.length - 1) {
+        spacedWordIdx++;
+      } else {
+        if (spacedRoundCount < 3) {
+          spacedRoundCount++;
+          spacedWordIdx = 0;
+        } else {
+          spacedRoundCount = 1;
+          spacedWordIdx = 0;
+        }
+      }
+      renderSpacedCard(true);
+    }
+
+    function handleSpacedPrev() {
+      if (spacedWordIdx > 0) {
+        spacedWordIdx--;
+      } else if (spacedRoundCount > 1) {
+        spacedRoundCount--;
+        spacedWordIdx = vocabulary.length - 1;
+      }
+      renderSpacedCard(true);
+    }
+
+    // --- 3. Flashcards ---
+    function renderCard() {
+      const item = vocabulary[cardIdx];
+      const cardInner = document.getElementById('card-inner');
+
+      if (isCardFlipped) {
+        cardInner.classList.remove('is-flipped');
+        isCardFlipped = false;
+      }
+
+      document.getElementById('card-eng').textContent = item.eng;
+      document.getElementById('card-kor').textContent = item.kor;
+      document.getElementById('card-ex').textContent = `"${item.ex}"`;
+
+      document.getElementById('card-index-txt').textContent = `${cardIdx + 1} / ${vocabulary.length}`;
+      document.getElementById('card-progress').style.width = `${((cardIdx + 1) / vocabulary.length) * 100}%`;
+    }
+
+    // --- 4. Quiz ---
+    function initQuiz() {
+      quizIdx = 0;
+      quizScore = 0;
+      quizData = [...vocabulary].sort(() => Math.random() - 0.5);
+
+      document.getElementById('quiz-body').classList.remove('hidden');
+      document.getElementById('quiz-result').classList.add('hidden');
+
+      renderQuizQuestion();
+    }
+
+    function renderQuizQuestion() {
+      const q = quizData[quizIdx];
+      document.getElementById('quiz-word').textContent = q.eng;
+      document.getElementById('quiz-index-txt').textContent = `${quizIdx + 1} / ${vocabulary.length}`;
+      document.getElementById('quiz-progress').style.width = `${((quizIdx + 1) / vocabulary.length) * 100}%`;
+
+      if (isUserInteracted) speakWord(q.eng);
+
+      const wrongs = vocabulary
+        .filter(item => item.eng !== q.eng)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3)
+        .map(item => item.kor);
+
+      const options = [q.kor, ...wrongs].sort(() => Math.random() - 0.5);
+      const container = document.getElementById('quiz-options');
+      container.innerHTML = '';
+
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'w-full p-3.5 bg-white hover:bg-slate-50 active:bg-slate-100 text-left border border-slate-300 rounded-xl font-medium text-slate-700 transition shadow-sm';
+        btn.textContent = opt;
+        btn.onclick = () => checkQuizAnswer(btn, opt === q.kor);
+        container.appendChild(btn);
+      });
+    }
+
+    function checkQuizAnswer(selectedBtn, isCorrect) {
+      const allBtns = document.querySelectorAll('#quiz-options button');
+      allBtns.forEach(b => b.disabled = true);
+
+      if (isCorrect) {
+        selectedBtn.className = 'w-full p-3.5 text-left border rounded-xl font-semibold bg-emerald-100 border-emerald-500 text-emerald-800 shadow-sm';
+        quizScore++;
+      } else {
+        selectedBtn.className = 'w-full p-3.5 text-left border rounded-xl font-semibold bg-rose-100 border-rose-500 text-rose-800 shadow-sm';
+        allBtns.forEach(b => {
+          if (b.textContent === quizData[quizIdx].kor) {
+            b.className = 'w-full p-3.5 text-left border rounded-xl font-semibold bg-emerald-100 border-emerald-500 text-emerald-800 shadow-sm';
+          }
+        });
+      }
+
+      setTimeout(() => {
+        quizIdx++;
+        if (quizIdx < vocabulary.length) {
+          renderQuizQuestion();
+        } else {
+          showQuizResult();
+        }
+      }, 900);
+    }
+
+    function showQuizResult() {
+      document.getElementById('quiz-body').classList.add('hidden');
+      document.getElementById('quiz-result').classList.remove('hidden');
+      document.getElementById('quiz-score').textContent = `${quizScore} / ${vocabulary.length}`;
+
+      let msg = "💪 다시 한번 복습해보세요!";
+      if (quizScore === 20) msg = "🎉 완벽합니다! 모든 단어를 암기하셨습니다!";
+      else if (quizScore >= 15) msg = "👍 아주 훌륭합니다! 조금만 더 하면 완벽해요.";
+      else if (quizScore >= 10) msg = "🙂 잘하고 계십니다! 차근차근 더 공부해봅시다.";
+
+      document.getElementById('quiz-feedback').textContent = msg;
+    }
+
+    // --- 5. Word List ---
+    function renderWordList() {
+      const container = document.getElementById('word-list-container');
+      container.innerHTML = '';
+
+      vocabulary.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl';
+        
+        row.innerHTML = `
+          <div>
+            <span class="font-bold text-slate-800 text-sm sm:text-base">${idx + 1}. ${item.eng}</span>
+            <div class="text-xs sm:text-sm text-slate-500 mt-0.5">${item.kor}</div>
+          </div>
+          <button type="button" class="list-audio-btn p-2 bg-slate-200 hover:bg-slate-300 active:scale-95 rounded-full text-base transition">🔊</button>
+        `;
+
+        row.querySelector('.list-audio-btn').onclick = (e) => {
+          e.stopPropagation();
+          enableAudioInteraction();
+          speakWord(item.eng);
+        };
+
+        container.appendChild(row);
+      });
+    }
+
+    // Initialization & Event Attachments
+    document.addEventListener('DOMContentLoaded', () => {
+      // Global click listener to unlock audio autoplay
+      window.addEventListener('click', enableAudioInteraction, { once: true });
+      window.addEventListener('touchstart', enableAudioInteraction, { once: true });
+
+      // Tab Events
+      document.getElementById('nav-massed').onclick = () => setTab('massed');
+      document.getElementById('nav-spaced').onclick = () => setTab('spaced');
+      document.getElementById('nav-card').onclick = () => setTab('card');
+      document.getElementById('nav-quiz').onclick = () => setTab('quiz');
+      document.getElementById('nav-list').onclick = () => setTab('list');
+
+      // Massed Events
+      document.getElementById('massed-card-trigger').onclick = (e) => {
+        if (!e.target.closest('#massed-audio')) {
+          isMassedFlipped = !isMassedFlipped;
+          document.getElementById('massed-card-inner').classList.toggle('is-flipped');
+        }
+      };
+      document.getElementById('massed-audio').onclick = (e) => {
+        e.stopPropagation();
+        enableAudioInteraction();
+        speakWord(vocabulary[massedWordIdx].eng);
+      };
+      document.getElementById('massed-next').onclick = handleMassedNext;
+      document.getElementById('massed-prev').onclick = handleMassedPrev;
+
+      // Spaced Events
+      document.getElementById('spaced-card-trigger').onclick = (e) => {
+        if (!e.target.closest('#spaced-audio')) {
+          isSpacedFlipped = !isSpacedFlipped;
+          document.getElementById('spaced-card-inner').classList.toggle('is-flipped');
+        }
+      };
+      document.getElementById('spaced-audio').onclick = (e) => {
+        e.stopPropagation();
+        enableAudioInteraction();
+        speakWord(vocabulary[spacedWordIdx].eng);
+      };
+      document.getElementById('spaced-next').onclick = handleSpacedNext;
+      document.getElementById('spaced-prev').onclick = handleSpacedPrev;
+
+      // Card Events
+      document.getElementById('card-trigger').onclick = (e) => {
+        if (!e.target.closest('#card-audio')) {
+          isCardFlipped = !isCardFlipped;
+          document.getElementById('card-inner').classList.toggle('is-flipped');
+        }
+      };
+      document.getElementById('card-audio').onclick = (e) => {
+        e.stopPropagation();
+        enableAudioInteraction();
+        speakWord(vocabulary[cardIdx].eng);
+      };
+      document.getElementById('card-next').onclick = () => {
+        cardIdx = (cardIdx + 1) % vocabulary.length;
+        renderCard();
+      };
+      document.getElementById('card-prev').onclick = () => {
+        cardIdx = (cardIdx - 1 + vocabulary.length) % vocabulary.length;
+        renderCard();
+      };
+
+      // Quiz Event
+      document.getElementById('quiz-restart').onclick = initQuiz;
+
+      // Load initial state
+      renderMassedCard(false);
+    });
+  </script>
+</body>
+</html>
